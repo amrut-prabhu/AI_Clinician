@@ -2,7 +2,6 @@
 
 % (c) Matthieu Komorowski, Imperial College London 2015-2019
 % as seen in publication: https://www.nature.com/articles/s41591-018-0213-5
-
 % version 16 Feb 19
 % IDENTIFIES THE COHORT OF PATIENTS WITH SEPSIS in MIMIC-III
 
@@ -22,6 +21,7 @@
 
 % note: the process generates the same features as the final MDP dataset, most of which are not used to compute SOFA
 % External files required: Reflabs, Refvitals, sample_and_hold (all saved in reference_matrices.mat file)
+% load('reference_matrices.mat')
 
 % This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 % without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE
@@ -29,32 +29,35 @@
 
 %% ########################################################################
 % IMPORT ALL DATA
+load('reference_matrices.mat')
 
 tic
-abx=table2array(readtable('D:/exportdir/abx.csv'));
-culture=table2array(readtable('D:/exportdir/culture.csv'));
-microbio=table2array(readtable('D:/exportdir/microbio.csv'));
-demog=(readtable('D:/exportdir/demog.csv'));
-ce010=table2array(readtable('D:/exportdir/ce010000.csv'));
-ce1020=table2array(readtable('D:/exportdir/ce1000020000.csv'));
-ce2030=table2array(readtable('D:/exportdir/ce2000030000.csv'));
-ce3040=table2array(readtable('D:/exportdir/ce3000040000.csv'));
-ce4050=table2array(readtable('D:/exportdir/ce4000050000.csv'));
-ce5060=table2array(readtable('D:/exportdir/ce5000060000.csv'));
-ce6070=table2array(readtable('D:/exportdir/ce6000070000.csv'));
-ce7080=table2array(readtable('D:/exportdir/ce7000080000.csv'));
-ce8090=table2array(readtable('D:/exportdir/ce8000090000.csv'));
-ce90100=table2array(readtable('D:/exportdir/ce90000100000.csv'));
-labU=[ table2array(readtable('D:/exportdir/labs_ce.csv')) ; table2array(readtable('D:/exportdir/labs_le.csv'))  ];
-MV=table2array(readtable('D:/exportdir/mechvent.csv'));
-inputpreadm=table2array(readtable('D:/exportdir/preadm_fluid.csv'));
-inputMV=table2array(readtable('D:/exportdir/fluid_mv.csv'));
-inputCV=table2array(readtable('D:/exportdir/fluid_cv.csv'));
-vasoMV=table2array(readtable('D:/exportdir/vaso_mv.csv'));
-vasoCV=table2array(readtable('D:/exportdir/vaso_cv.csv'));
-UOpreadm=table2array(readtable('D:/exportdir/preadm_uo.csv'));
-UO=table2array(readtable('D:/exportdir/uo.csv'));
+abx=table2array(readtable('C:/Users/amrut/Projects/fyp-data/abx.csv'));
+culture=table2array(readtable('C:/Users/amrut/Projects/fyp-data/culture.csv'));
+microbio=table2array(readtable('C:/Users/amrut/Projects/fyp-data/microbio.csv'));
+demog=(readtable('C:/Users/amrut/Projects/fyp-data/demog.csv'));
+ce010=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce010000.csv'));
+ce1020=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce1000020000.csv'));
+ce2030=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce2000030000.csv'));
+ce3040=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce3000040000.csv'));
+ce4050=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce4000050000.csv'));
+ce5060=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce5000060000.csv'));
+ce6070=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce6000070000.csv'));
+ce7080=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce7000080000.csv'));
+ce8090=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce8000090000.csv'));
+ce90100=table2array(readtable('C:/Users/amrut/Projects/fyp-data/ce90000100000.csv'));
+labU=[ table2array(readtable('C:/Users/amrut/Projects/fyp-data/labs_ce.csv')) ; table2array(readtable('C:/Users/amrut/Projects/fyp-data/labs_le.csv'))  ];
+MV=table2array(readtable('C:/Users/amrut/Projects/fyp-data/mechvent.csv'));
+inputpreadm=table2array(readtable('C:/Users/amrut/Projects/fyp-data/preadm_fluid.csv'));
+inputMV=table2array(readtable('C:/Users/amrut/Projects/fyp-data/fluid_mv.csv'));
+inputCV=table2array(readtable('C:/Users/amrut/Projects/fyp-data/fluid_cv.csv'));
+vasoMV=table2array(readtable('C:/Users/amrut/Projects/fyp-data/vaso_mv.csv'));
+vasoCV=table2array(readtable('C:/Users/amrut/Projects/fyp-data/vaso_cv.csv'));
+UOpreadm=table2array(readtable('C:/Users/amrut/Projects/fyp-data/preadm_uo.csv'));
+UO=table2array(readtable('C:/Users/amrut/Projects/fyp-data/uo.csv'));
 toc
+
+fprintf('1. IMPORT DATA FROM CSV FILES \n')
 
 %% ########################################################################
 %                       INITIAL DATA MANIPULATIONS
@@ -155,7 +158,7 @@ for icustayid=1:100000
             onset(icustayid,1)=subj_bact(1);   %subject_id
             onset(icustayid,2)=icustayid;       % icustay_id
             onset(icustayid,3)=ab1;     %onset of infection = abx time
-              icustayid
+            %  icustayid
             break
         elseif M<=72 & ab1>=bact1    %elseif sample was first and delay < 72h
             onset(icustayid,1)=subj_bact(1);
@@ -171,6 +174,7 @@ toc
 %sum of records found
 sum(onset(:,3)>0)
 
+fprintf('2. FLAG PRESUMED INFECTION \n')
 
 %% Replacing item_ids with column numbers from reference tables
 
@@ -217,7 +221,7 @@ for i=1:size(ce90100,1)
 [~,locb]=ismember(Refvitals,ce90100(i,3));ce90100(i,3)=find(max(locb')');
 end
 
-
+fprintf('3. PREPROCESSING \n')
 
 %% ########################################################################
 %           INITIAL REFORMAT WITH CHARTEVENTS, LABS AND MECHVENT
@@ -556,6 +560,7 @@ reformat(ii,45)=(reformat(ii,44)*0.6934)-0.1752;
 ii=~isnan(reformat(:,45)) & isnan(reformat(:,44));
 reformat(ii,44)=(reformat(ii,45)+0.1752)./0.6934;
 
+fprintf('4. REFORMAT1 \n')
 
 %% ########################################################################
 %                      SAMPLE AND HOLD on RAW DATA
@@ -718,6 +723,8 @@ toc
 reformat2(irow:end,:)=[];
 close(h);
 
+fprintf('5. REFORMAT2 \n')
+
 
 %% ########################################################################
 %    CONVERT TO TABLE AND DELETE VARIABLES WITH EXCESSIVE MISSINGNESS
@@ -734,6 +741,8 @@ miss=sum(isnan(reformat2))./size(reformat2,1);
 
 % if values have less than 70% missing values (over 30% of values present): I keep them
 reformat3t=reformat2t(:,[true(1,11) miss(12:74)<0.70 true(1,11)]) ; 
+
+fprintf('6. REFORMAT3 \n')
 
 %% ########################################################################
 %             HANDLING OF MISSING VALUES  &  CREATE REFORMAT4T
@@ -760,7 +769,7 @@ ref=reformat3(:,11:mechventcol-1);  %columns of interest
 
 tic
 for i=1:10000:size(reformat3,1)-9999   %dataset divided in 5K rows chunks (otherwise too large)
-    i
+    % i
     ref(i:i+9999,:)=knnimpute(ref(i:i+9999,:)',1, 'distance','seuclidean')';
 end
 
@@ -773,6 +782,8 @@ reformat3t(:,11:mechventcol-1)=array2table(ref);
 
 reformat4t=reformat3t;
 reformat4=table2array(reformat4t);
+
+fprintf('7. REFORMAT4 in 4h time slots \n')
 
 
 %% ########################################################################
@@ -874,6 +885,7 @@ end
 reformat4t(:,end-1)=array2table(reformat4(:,end-1));
 reformat4t(:,end)=array2table(reformat4(:,end));
 
+fprintf('8. COMPUTE SOFA at each time step \n')
 
 %% ########################################################################
 %                            EXCLUSION OF SOME PATIENTS 
@@ -958,6 +970,8 @@ end
 toc
 sepsis(irow:end,:)=[];
 
+fprintf('9. FLAG SEPSIS \n')
+
 sepsis=array2table(sepsis);
 sepsis.Properties.VariableNames={'icustayid','morta_90d','max_sofa','max_sirs','sepsis_time'};
 
@@ -969,3 +983,53 @@ size(sepsis,1)
 
 %save cohort
 writetable(sepsis,'sepsis_mimiciii.csv','Delimiter',',');
+
+fprintf('10. WRITE COHORT TO sepsis_mimiciii.csv \n')
+
+%% ##
+% >> AIClinician_sepsis3_def_160219
+% 
+% Elapsed time is 288.755222 seconds.
+% 1. IMPORT DATA FROM CSV FILES 
+% 
+% Elapsed time is 1051.436897 seconds.
+% Elapsed time is 2119.125226 seconds.
+% 
+% ans =
+%        26423
+% 2. FLAG PRESUMED INFECTION 
+% 
+% Elapsed time is 126.502852 seconds.
+% 3. PREPROCESSING 
+% 
+% Elapsed time is 7374.302524 seconds.
+% 4. REFORMAT1 
+% 
+% Elapsed time is 1927.505376 seconds.
+% 5. REFORMAT2 
+% 6. REFORMAT3 
+% 
+% i =
+%      1
+% ...
+% i =
+%       220001
+%
+% Elapsed time is 679.134527 seconds.
+% 7. REFORMAT4 in 4h time slots 
+% 
+% 8. COMPUTE SOFA at each time step 
+% 
+% ans =
+%        21466
+% 
+% ans =
+%        21345
+% 
+% Elapsed time is 53.194774 seconds.
+% 9. FLAG SEPSIS 
+% 
+% ans =
+%        21331
+% 10. WRITE COHORT TO sepsis_mimiciii.csv 
+% ########################################################################
