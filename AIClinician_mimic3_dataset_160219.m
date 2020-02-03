@@ -4,11 +4,14 @@
 % as seen in publication: https://www.nature.com/articles/s41591-018-0213-5
 
 % version 16 Feb 19
-% uses the sepsis-3 cohort previously defined
+% uses the sepsis-3 cohort previously defined (AIClinician_sepsis3_def_160219.m)
 % builds the MIMIC-III dataset
 
 % This code is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
 % without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE
+
+%% ###### Read Sepsis table from csv file
+% sepsis = readtable('sepsis_mimiciii.csv','Delimiter',',','ReadVariableNames',true);
 
 %% ########################################################################
 %           INITIAL REFORMAT WITH CHARTEVENTS, LABS AND MECHVENT
@@ -359,7 +362,7 @@ reformat=SAH(reformat(:,1:68),sample_and_hold);
 % ########################################################################
 
 tic
-     save('D:\BACKUP MIT PC\Data_100219.mat', '-v7.3');
+     save('C:\Users\amrut\Projects\AI_Clinician\Data_100219.mat', '-v7.3');
 toc
 
 
@@ -515,7 +518,7 @@ close(h);
 
 
 tic
-     save('D:\BACKUP MIT PC\Data_110219.mat', '-v7.3');
+     save('C:\Users\amrut\Projects\AI_Clinician\Data_110219.mat', '-v7.3');
 toc
 
 %% ########################################################################
@@ -600,7 +603,7 @@ ref=reformat3(:,11:mechventcol-1);  %columns of interest
 
 tic
 for i=1:10000:size(reformat3,1)-9999   %dataset divided in 5K rows chunks (otherwise too large)
-    i
+    % i
     ref(i:i+9999,:)=knnimpute(ref(i:i+9999,:)',1, 'distance','seuclidean')';
 end
 
@@ -706,4 +709,6 @@ reformat4t(:,end)=array2table(reformat4(:,end));
 % ########################################################################
 
 MIMICtable = reformat4t;
+
+writetable(MIMICtable,'mimiciii_dataset.csv','Delimiter',',');
 
