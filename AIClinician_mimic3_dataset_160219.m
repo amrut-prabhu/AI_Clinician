@@ -681,10 +681,11 @@ a(4)=find(ismember(reformat4t.Properties.VariableNames,{'paCO2'}));
 a(5)=find(ismember(reformat4t.Properties.VariableNames,{'WBC_count'}));
 s=table2array(reformat4t(:,a));  
 
-s1=[s(:,1)>=38| s(:,1)<=36];   %count of points for all criteria of SIRS
-s2=[s(:,2)>90 ];
-s3=[s(:,3)>=20|s(:,4)<=32];
-s4=[s(:,5)>=12| s(:,5)<4];
+%count of points for all criteria of SIRS
+s1=[s(:,1)>=38| s(:,1)<=36]; % fever or hypothermia (temperature >38 or <36 ?)   
+s2=[s(:,2)>90 ]; %  tachycardia (heart rate >90 beats/min)
+s3=[s(:,3)>=20|s(:,4)<=32]; % tachypnea(respiratory rate >20 breaths/min) OR (PaCO2 < 32 ?)
+s4=[s(:,5)>=12| s(:,5)<4]; %  bandemia (white blood cells >1,200/mm3, <4,000/mm3 or bandemia ?10%)
 reformat4(:,nrcol+8)=s1+s2+s3+s4;
 
 % adds 2 cols for SOFA and SIRS, if necessary
