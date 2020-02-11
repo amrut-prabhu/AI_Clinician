@@ -28,6 +28,8 @@ IV. the Matlab code (AIClinician_core_160219.m) to:
 3.	test this optimal policy on the eICU-RI dataset;
 4.	compute the main results and key figures.
 
+This code uses the `MDPtoolbox`. So, you need to add the folder to the MATLAB path using `addpath('C:\Users\amrut\Projects\AI_Clinician\MDPtoolbox','-end')`.
+Otherwise, you may encounter an error like `Unrecognized function or variable 'mdp_policy_iteration_with_Q'.`.
 
 V. Additional files:
 1. The unique identifiers for these patients in both datasets are provided (patientIDs_MIMIC3.csv and patientIDs_eRI.csv). Note: you'll need to add 200,000 to all the patient identifiers in patientIDs_MIMIC3 to match the numbering found in the initiail database.
