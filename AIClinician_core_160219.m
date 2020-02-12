@@ -30,11 +30,17 @@
 % Note: The size of the cohort will depend on which version of MIMIC-III is used.
 % The original cohort from the 2018 Nature Medicine publication was built using MIMIC-III v1.3.
 
+
+%% ###### Read MIMIC table from csv file
+% MIMICtable = readtable('mimiciii_dataset.csv','Delimiter',',','ReadVariableNames',true);
+
+addpath('C:\Users\amrut\Projects\AI_Clinician\MDPtoolbox','-end')
+
 % ############################  MODEL PARAMETERS   #####################################
 
 disp('####  INITIALISATION  ####') 
 
-nr_reps=500;               % nr of repetitions (total nr models)
+nr_reps=5;%500;               % nr of repetitions (total nr models)
 nclustering=32;            % how many times we do clustering (best solution will be chosen)
 prop=0.25;                 % proportion of the data we sample for clustering
 gamma=0.99;                % gamma
@@ -76,26 +82,27 @@ MIMICzs=[reformat5(:, colbin)-0.5 zscore(reformat5(:,colnorm)) zscore(log(0.1+re
 MIMICzs(:,[4])=log(MIMICzs(:,[ 4])+.6);   % MAX DOSE NORAD 
 MIMICzs(:,45)=2.*MIMICzs(:,45);   % increase weight of this variable
 
+
 % name of cols in eICU test set
-coltbin={'gender', 'mechvent','max_dose_vaso','re_admission'}; 
-coltnorm={'age','admissionweight','gcs','hr','sysbp','meanbp','diabp','rr','temp_c','fio2both',...
-    'potassium','sodium','chloride','glucose','magnesium','calcium',...
-    'hb','wbc_count','platelets_count','ptt','pt','arterial_ph','pao2','paco2',...
-    'arterial_be','hco3','arterial_lactate','sofa','sirs','shock_index','pao2_fio2','cumulated_balance_tev'};
-coltlog={'spo2','bun','creatinine','sgot','sgpt','total_bili','inr','input_total_tev','input_4hourly_tev','output_total','output_4hourly'};
-
-coltbin=find(ismember(eICUtable.Properties.VariableNames,coltbin));coltnorm=find(ismember(eICUtable.Properties.VariableNames,coltnorm));coltlog=find(ismember(eICUtable.Properties.VariableNames,coltlog));
-
-Xtest=eICUtable(:, [coltbin coltnorm coltlog]);
-
-% shuffle columns so test match train
-Xtest = Xtest(:,[1:43 45:47 44]);Xtest = Xtest(:,[1:43 45 44 46:end]);Xtest = Xtest(:,[1:39 41:42 40 43:end]);Xtest = Xtest(:,[1:32 34 33 35:end]);
-Xtest = Xtest(:,[1:13 15:32 14 33:end]);Xtest = Xtest(:,[1:13 31 14:30 32:end]);Xtest = Xtest(:,[1:14 16 15 17:end]);Xtest = Xtest(:,[1:10 12 11 13:end]);
-Xtest = Xtest(:,[1:8 10:12 9 13:end]);Xtest = Xtest(:,[1 4 2:3 5:end]);Xtest = Xtest(:,[1:29 31 30 32:end]);Xtest = Xtest(:,[1:32 34 33 35:end]);
-Xtest = Xtest(:,[1:44 46 45 end]);Xtest = Xtest(:,[1:43 45:46 44 end]);
-
-eICUraw=table2array(Xtest);
-eICUraw(isnan(eICUraw(:,45)),45)=0;  %replace NAN fluid with 0
+% coltbin={'gender', 'mechvent','max_dose_vaso','re_admission'}; 
+% coltnorm={'age','admissionweight','gcs','hr','sysbp','meanbp','diabp','rr','temp_c','fio2both',...
+%     'potassium','sodium','chloride','glucose','magnesium','calcium',...
+%     'hb','wbc_count','platelets_count','ptt','pt','arterial_ph','pao2','paco2',...
+%     'arterial_be','hco3','arterial_lactate','sofa','sirs','shock_index','pao2_fio2','cumulated_balance_tev'};
+% coltlog={'spo2','bun','creatinine','sgot','sgpt','total_bili','inr','input_total_tev','input_4hourly_tev','output_total','output_4hourly'};
+% 
+% coltbin=find(ismember(eICUtable.Properties.VariableNames,coltbin));coltnorm=find(ismember(eICUtable.Properties.VariableNames,coltnorm));coltlog=find(ismember(eICUtable.Properties.VariableNames,coltlog));
+% 
+% Xtest=eICUtable(:, [coltbin coltnorm coltlog]);
+% 
+% % shuffle columns so test match train
+% Xtest = Xtest(:,[1:43 45:47 44]);Xtest = Xtest(:,[1:43 45 44 46:end]);Xtest = Xtest(:,[1:39 41:42 40 43:end]);Xtest = Xtest(:,[1:32 34 33 35:end]);
+% Xtest = Xtest(:,[1:13 15:32 14 33:end]);Xtest = Xtest(:,[1:13 31 14:30 32:end]);Xtest = Xtest(:,[1:14 16 15 17:end]);Xtest = Xtest(:,[1:10 12 11 13:end]);
+% Xtest = Xtest(:,[1:8 10:12 9 13:end]);Xtest = Xtest(:,[1 4 2:3 5:end]);Xtest = Xtest(:,[1:29 31 30 32:end]);Xtest = Xtest(:,[1:32 34 33 35:end]);
+% Xtest = Xtest(:,[1:44 46 45 end]);Xtest = Xtest(:,[1:43 45:46 44 end]);
+% 
+% eICUraw=table2array(Xtest);
+% eICUraw(isnan(eICUraw(:,45)),45)=0;  %replace NAN fluid with 0
     
 % compute conversion factors using MIMIC data
 a=MIMICraw(:, 1:3)-0.5; 
@@ -104,79 +111,79 @@ a=MIMICraw(:, 1:3)-0.5;
 [d,dmu,dsigma]=zscore(log(0.1+MIMICraw(:,37:47)));
 
 % ZSCORE full at once XTEST using the factors from training data
-eICUzs=eICUraw;
-eICUzs(:,1:3)=eICUzs(:,1:3)-0.5;
-eICUzs(:,4)=log(eICUzs(:,4)+0.1);
-eICUzs(:,5:36)=(eICUzs(:,5:36)-cmu)./csigma;
-eICUzs(:,37:47)=(log(0.1+eICUzs(:,37:47))-dmu)./dsigma;
+% eICUzs=eICUraw;
+% eICUzs(:,1:3)=eICUzs(:,1:3)-0.5;
+% eICUzs(:,4)=log(eICUzs(:,4)+0.1);
+% eICUzs(:,5:36)=(eICUzs(:,5:36)-cmu)./csigma;
+% eICUzs(:,37:47)=(log(0.1+eICUzs(:,37:47))-dmu)./dsigma;
 
-if sum(isnan(eICUraw(:,4))) >0 || sum(isnan(eICUraw(:,45)))>0;  disp('NaNs in Xtest / drug doses'); disp('EXECUTION STOPPED'); return;end
+% if sum(isnan(eICUraw(:,4))) >0 || sum(isnan(eICUraw(:,45)))>0;  disp('NaNs in Xtest / drug doses'); disp('EXECUTION STOPPED'); return;end
 p=gcp('nocreate'); if isempty(p) ; pool = parpool; end ; mdp_verbose
 stream = RandStream('mlfg6331_64'); options = statset('UseParallel',1,'UseSubstreams',1,'Streams',stream); warning('off','all')
 
 
  for modl=1:nr_reps  % MAIN LOOP OVER ALL MODELS
    
-  N=numel(icuuniqueids); %total number of rows to choose from
-  grp=floor(ncv*rand(N,1)+1);  %list of 1 to 5 (20% of the data in each grp) -- this means that train/test MIMIC split are DIFFERENT in all the 500 models
-  crossval=1;
-  trainidx=icuuniqueids(crossval~=grp);
-  testidx=icuuniqueids(crossval==grp);
-  train=ismember(icustayidlist,trainidx);
-  test=ismember(icustayidlist,testidx);
-  X=MIMICzs(train,:);
-  Xtestmimic=MIMICzs(~train,:);
-  blocs=reformat5(train,1);
-  bloctestmimic=reformat5(~train,1);
-  ptid=reformat5(train,2);
-  ptidtestmimic=reformat5(~train,2);
-  outcome=10; %   HOSP _ MORTALITY = 8 / 90d MORTA = 10
-  Y90=reformat5(train,outcome);   
+      N=numel(icuuniqueids); %total number of rows to choose from
+      grp=floor(ncv*rand(N,1)+1);  %list of 1 to 5 (20% of the data in each grp) -- this means that train/test MIMIC split are DIFFERENT in all the 500 models
+      crossval=1;
+      trainidx=icuuniqueids(crossval~=grp);
+      testidx=icuuniqueids(crossval==grp);
+      train=ismember(icustayidlist,trainidx);
+      test=ismember(icustayidlist,testidx);
+      X=MIMICzs(train,:);
+      Xtestmimic=MIMICzs(~train,:);
+      blocs=reformat5(train,1);
+      bloctestmimic=reformat5(~train,1);
+      ptid=reformat5(train,2);
+      ptidtestmimic=reformat5(~train,2);
+      outcome=10; %   HOSP _ MORTALITY = 8 / 90d MORTA = 10
+      Y90=reformat5(train,outcome);   
 
-fprintf('########################   MODEL NUMBER : ');       fprintf('%d \n',modl);         disp( datestr(now))
+    fprintf('########################   MODEL NUMBER : ');       fprintf('%d \n',modl);         disp( datestr(now))
           
  
-% #######   find best clustering solution (lowest intracluster variability)  ####################
-disp('####  CLUSTERING  ####') % BY SAMPLING
-N=size(X,1); %total number of rows to choose from
-sampl=X(find(floor(rand(N,1)+prop)),:);
-[~,C] = kmeans(sampl,ncl,'Options',options,'MaxIter',10000,...
-    'Start','plus','Display','final','Replicates',nclustering);
-[idx]=knnsearch(C,X);  %N-D nearest point search: look for points closest to each centroid
+    % #######   find best clustering solution (lowest intracluster variability)  ####################
+    disp('####  CLUSTERING  ####') % BY SAMPLING
+    N=size(X,1); %total number of rows to choose from
+    sampl=X(find(floor(rand(N,1)+prop)),:);
+    [~,C] = kmeans(sampl,ncl,'Options',options,'MaxIter',10000,...
+        'Start','plus','Display','final','Replicates',nclustering);
+    [idx]=knnsearch(C,X);  %N-D nearest point search: look for points closest to each centroid
 
 
-%  ############################# CREATE ACTIONS  ########################
-disp('####  CREATE ACTIONS  ####') 
-nact=nra^2;
+    %  ############################# CREATE ACTIONS  ########################
+    disp('####  CREATE ACTIONS  ####') 
+    nact=nra^2;
  
-iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
-vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
+    iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
+    vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
+
+     a= reformat5(:,iol);                   %IV fluid
+     a= tiedrank(a(a>0)) / length(a(a>0));   % excludes zero fluid (will be action 1)
+
+            iof=floor((a+0.2499999999)*4);  %converts iv volume in 4 actions
+            a= reformat5(:,iol); a=find(a>0);  %location of non-zero fluid in big matrix
+            io=ones(size(reformat5,1),1);  %array of ones, by default     
+            io(a)=iof+1;   %where more than zero fluid given: save actual action
+            vc=reformat5(:,vcl);  vcr= tiedrank(vc(vc~=0)) / numel(vc(vc~=0)); vcr=floor((vcr+0.249999999999)*4);  %converts to 4 bins
+            vcr(vcr==0)=1; vc(vc~=0)=vcr+1; vc(vc==0)=1;
+            ma1=[ median(reformat5(io==1,iol))  median(reformat5(io==2,iol))  median(reformat5(io==3,iol))  median(reformat5(io==4,iol))  median(reformat5(io==5,iol))];  %median dose of drug in all bins
+            ma2=[ median(reformat5(vc==1,vcl))  median(reformat5(vc==2,vcl))  median(reformat5(vc==3,vcl))  median(reformat5(vc==4,vcl))  median(reformat5(vc==5,vcl))] ;
+
+    med=[io vc];
+    [uniqueValues,~,actionbloc] = unique(array2table(med),'rows');
+    actionbloctrain=actionbloc(train);
+    uniqueValuesdose=[ ma2(uniqueValues.med2)' ma1(uniqueValues.med1)'];  % median dose of each bin for all 25 actions
+
  
- a= reformat5(:,iol);                   %IV fluid
- a= tiedrank(a(a>0)) / length(a(a>0));   % excludes zero fluid (will be action 1)
- 
-        iof=floor((a+0.2499999999)*4);  %converts iv volume in 4 actions
-        a= reformat5(:,iol); a=find(a>0);  %location of non-zero fluid in big matrix
-        io=ones(size(reformat5,1),1);  %array of ones, by default     
-        io(a)=iof+1;   %where more than zero fluid given: save actual action
-        vc=reformat5(:,vcl);  vcr= tiedrank(vc(vc~=0)) / numel(vc(vc~=0)); vcr=floor((vcr+0.249999999999)*4);  %converts to 4 bins
-        vcr(vcr==0)=1; vc(vc~=0)=vcr+1; vc(vc==0)=1;
-        ma1=[ median(reformat5(io==1,iol))  median(reformat5(io==2,iol))  median(reformat5(io==3,iol))  median(reformat5(io==4,iol))  median(reformat5(io==5,iol))];  %median dose of drug in all bins
-        ma2=[ median(reformat5(vc==1,vcl))  median(reformat5(vc==2,vcl))  median(reformat5(vc==3,vcl))  median(reformat5(vc==4,vcl))  median(reformat5(vc==5,vcl))] ;
-  
-med=[io vc];
-[uniqueValues,~,actionbloc] = unique(array2table(med),'rows');
-actionbloctrain=actionbloc(train);
-uniqueValuesdose=[ ma2(uniqueValues.med2)' ma1(uniqueValues.med1)'];  % median dose of each bin for all 25 actions
- 
- 
-% ###################################################################################################################################
-disp('####  CREATE QLDATA3  ####')
-r=[100 -100]; r2=r.*(2*(1-Y90)-1); 
-qldata=[blocs idx actionbloctrain Y90 r2];  % contains bloc / state / action / outcome&reward     %1 = died
-qldata3=zeros(floor(size(qldata,1)*1.2),4); 
-c=0;
-abss=[ncl+2 ncl+1]; %absorbing states numbers
+    % ###################################################################################################################################
+    disp('####  CREATE QLDATA3  ####')
+    r=[100 -100]; r2=r.*(2*(1-Y90)-1); 
+    qldata=[blocs idx actionbloctrain Y90 r2];  % contains bloc / state / action / outcome&reward     %1 = died
+    qldata3=zeros(floor(size(qldata,1)*1.2),4); 
+    c=0;
+    abss=[ncl+2 ncl+1]; %absorbing states numbers
  
         for i=1:size(qldata,1)-1
             c=c+1;  qldata3(c,:)=qldata(i,1:4);
@@ -187,90 +194,92 @@ abss=[ncl+2 ncl+1]; %absorbing states numbers
         qldata3(c+1:end,:)=[];
 
  
-% ###################################################################################################################################
-disp('####  CREATE TRANSITION MATRIX T(S'',S,A) ####')
- 
-transitionr=zeros(ncl+2,ncl+2,nact);  %this is T(S',S,A)
-sums0a0=zeros(ncl+2,nact);
- 
-     for i=1:size(qldata3,1)-1
- 
-         if (qldata3(i+1,1))~=1  % if we are not in the last state for this patient = if there is a transition to make!
-         S0=qldata3(i,2); S1=qldata3(i+1,2);  acid= qldata3(i,3);
-         transitionr(S1,S0,acid)=transitionr(S1,S0,acid)+1;  sums0a0(S0,acid)=sums0a0(S0,acid)+1;
-         end
-     end
- 
-      sums0a0(sums0a0<=transthres)=0;  %delete rare transitions (those seen less than 5 times = bottom 50%!!)
+    % ###################################################################################################################################
+    disp('####  CREATE TRANSITION MATRIX T(S'',S,A) ####')
 
-     for i=1:ncl+2
-         for j=1:nact
-             if sums0a0(i,j)==0
-                transitionr(:,i,j)=0; 
-             else
-                transitionr(:,i,j)=transitionr(:,i,j)/sums0a0(i,j);
+    transitionr=zeros(ncl+2,ncl+2,nact);  %this is T(S',S,A)
+    sums0a0=zeros(ncl+2,nact);
+
+         for i=1:size(qldata3,1)-1
+
+             if (qldata3(i+1,1))~=1  % if we are not in the last state for this patient = if there is a transition to make!
+             S0=qldata3(i,2); S1=qldata3(i+1,2);  acid= qldata3(i,3);
+             transitionr(S1,S0,acid)=transitionr(S1,S0,acid)+1;  sums0a0(S0,acid)=sums0a0(S0,acid)+1;
              end
          end
-     end
- 
+
+          sums0a0(sums0a0<=transthres)=0;  %delete rare transitions (those seen less than 5 times = bottom 50%!!)
+
+         for i=1:ncl+2
+             for j=1:nact
+                 if sums0a0(i,j)==0
+                    transitionr(:,i,j)=0; 
+                 else
+                    transitionr(:,i,j)=transitionr(:,i,j)/sums0a0(i,j);
+                 end
+             end
+         end
+
    
-transitionr(isnan(transitionr))=0;  %replace NANs with zeros
-transitionr(isinf(transitionr))=0;  %replace NANs with zeros
- 
-physpol=sums0a0./sum(sums0a0')';    %physicians policy: what action was chosen in each state
- 
- disp('####  CREATE TRANSITION MATRIX T(S,S'',A)  ####')
- 
-transitionr2=zeros(ncl+2,ncl+2,nact);  % this is T(S,S',A)
-sums0a0=zeros(ncl+2,nact);
- 
-     for i=1:size(qldata3,1)-1
- 
-         if (qldata3(i+1,1))~=1  % if we are not in the last state for this patient = if there is a transition to make!
-         S0=qldata3(i,2); S1=qldata3(i+1,2);  acid= qldata3(i,3);
-         transitionr2(S0,S1,acid)=transitionr2(S0,S1,acid)+1;  sums0a0(S0,acid)=sums0a0(S0,acid)+1;
-         end
-     end
- 
-      sums0a0(sums0a0<=transthres)=0;  %delete rare transitions (those seen less than 5 times = bottom 50%!!) IQR = 2-17
-     
-     for i=1:ncl+2
-         for j=1:nact
-             if sums0a0(i,j)==0
-                transitionr2(i,:,j)=0; 
-             else
-                transitionr2(i,:,j)=transitionr2(i,:,j)/sums0a0(i,j);
+    transitionr(isnan(transitionr))=0;  %replace NANs with zeros
+    transitionr(isinf(transitionr))=0;  %replace NANs with zeros
+
+    physpol=sums0a0./sum(sums0a0')';    %physicians policy: what action was chosen in each state
+
+    % transitionr(i,j,k) == transitionr2(j,i,k)
+
+     disp('####  CREATE TRANSITION MATRIX T(S,S'',A)  ####')
+
+    transitionr2=zeros(ncl+2,ncl+2,nact);  % this is T(S,S',A)
+    sums0a0=zeros(ncl+2,nact);
+
+         for i=1:size(qldata3,1)-1
+
+             if (qldata3(i+1,1))~=1  % if we are not in the last state for this patient = if there is a transition to make!
+             S0=qldata3(i,2); S1=qldata3(i+1,2);  acid= qldata3(i,3);
+             transitionr2(S0,S1,acid)=transitionr2(S0,S1,acid)+1;  sums0a0(S0,acid)=sums0a0(S0,acid)+1;
              end
          end
-     end
- 
-transitionr2(isnan(transitionr2))=0;  %replace NANs with zeros
-transitionr2(isinf(transitionr2))=0;  %replace infs with zeros
- 
-% #################################################################################################################################
-disp('####  CREATE REWARD MATRIX  R(S,A) ####')
-% CF sutton& barto bottom 1998 page 106. i compute R(S,A) from R(S'SA) and T(S'SA)
-r3=zeros(ncl+2,ncl+2,nact); r3(ncl+1,:,:)=-100; r3(ncl+2,:,:)=100;
-R=sum(transitionr.*r3);
-R=squeeze(R);   %remove 1 unused dimension
 
-% ###################################################################################################################################
-disp('####   POLICY ITERATION   ####')
+        sums0a0(sums0a0<=transthres)=0;  %delete rare transitions (those seen less than 5 times = bottom 50%!!) IQR = 2-17
+     
+         for i=1:ncl+2
+             for j=1:nact
+                 if sums0a0(i,j)==0
+                    transitionr2(i,:,j)=0; 
+                 else
+                    transitionr2(i,:,j)=transitionr2(i,:,j)/sums0a0(i,j);
+                 end
+             end
+         end
 
- [~,~,~,~,Qon] = mdp_policy_iteration_with_Q(transitionr2, R, gamma, ones(ncl+2,1));
- [~,OptimalAction]=max(Qon,[],2);  %deterministic 
- OA(:,modl)=OptimalAction; %save optimal actions
+    transitionr2(isnan(transitionr2))=0;  %replace NANs with zeros
+    transitionr2(isinf(transitionr2))=0;  %replace infs with zeros
  
-disp('#### OFF-POLICY EVALUATION - MIMIC TRAIN SET ####')
- 
-% create new version of QLDATA3
-r=[100 -100];
-r2=r.*(2*(1-Y90)-1); 
-qldata=[blocs idx actionbloctrain Y90 zeros(numel(idx),1) r2(:,1) ptid];  % contains bloc / state / action / outcome&reward     %1 = died
-qldata3=zeros(floor(size(qldata,1)*1.2),8); 
+    % #################################################################################################################################
+    disp('####  CREATE REWARD MATRIX  R(S,A) ####')
+    % CF sutton& barto bottom 1998 page 106. i compute R(S,A) from R(S'SA) and T(S'SA)
+    r3=zeros(ncl+2,ncl+2,nact); r3(ncl+1,:,:)=-100; r3(ncl+2,:,:)=100;
+    R=sum(transitionr.*r3);
+    R=squeeze(R);   %remove 1 unused dimension
 
-c=0;
-abss=[ncl+2 ncl+1]; %absorbing states numbers
+    % ###################################################################################################################################
+    disp('####   POLICY ITERATION   ####')
+
+     [~,~,~,~,Qon] = mdp_policy_iteration_with_Q(transitionr2, R, gamma, ones(ncl+2,1));
+     [~,OptimalAction]=max(Qon,[],2);  %deterministic 
+     OA(:,modl)=OptimalAction; %save optimal actions
+ 
+    disp('#### OFF-POLICY EVALUATION - MIMIC TRAIN SET ####')
+
+    % create new version of QLDATA3
+    r=[100 -100];
+    r2=r.*(2*(1-Y90)-1); 
+    qldata=[blocs idx actionbloctrain Y90 zeros(numel(idx),1) r2(:,1) ptid];  % contains bloc / state / action / outcome&reward     %1 = died
+    qldata3=zeros(floor(size(qldata,1)*1.2),8); 
+
+    c=0;
+    abss=[ncl+2 ncl+1]; %absorbing states numbers
  
         for i=1:size(qldata,1)-1
             c=c+1;
@@ -282,56 +291,56 @@ abss=[ncl+2 ncl+1]; %absorbing states numbers
         end
         qldata3(c+1:end,:)=[];
 
-% add pi(s,a) and b(s,a)
-p=0.01; %softening policies  
-softpi=physpol; % behavior policy = clinicians' 
+    % add pi(s,a) and b(s,a)
+    p=0.01; %softening policies  
+    softpi=physpol; % behavior policy = clinicians' 
 
-for i=1:750
-    ii=softpi(i,:)==0;    z=p/sum(ii);    nz=p/sum(~ii);    softpi(i,ii)=z;   softpi(i,~ii)=softpi(i,~ii)-nz;
-end
-softb=abs(zeros(752,25)-p/24); %"optimal" policy = target policy = evaluation policy 
-
-for i=1:750
-     softb(i,OptimalAction(i))=1-p;
-end
-
-for i=1:size(qldata3,1)  %adding the probas of policies to qldata3
-    if qldata3(i,2)<=750
-qldata3(i,5)=softpi(qldata3(i,2),qldata3(i,3));
-qldata3(i,6)=softb(qldata3(i,2),qldata3(i,3));
-qldata3(i,7)=OptimalAction(qldata3(i,2));   %optimal action
+    for i=1:750
+        ii=softpi(i,:)==0;    z=p/sum(ii);    nz=p/sum(~ii);    softpi(i,ii)=z;   softpi(i,~ii)=softpi(i,~ii)-nz;
     end
-end
+    softb=abs(zeros(752,25)-p/24); %"optimal" policy = target policy = evaluation policy 
 
-qldata3train=qldata3;
+    for i=1:750
+         softb(i,OptimalAction(i))=1-p;
+    end
 
-tic
- [ bootql,bootwis ] = offpolicy_multiple_eval_010518( qldata3,physpol, 0.99,1,6,750);
-toc
+    for i=1:size(qldata3,1)  %adding the probas of policies to qldata3
+        if qldata3(i,2)<=750
+    qldata3(i,5)=softpi(qldata3(i,2),qldata3(i,3));
+    qldata3(i,6)=softb(qldata3(i,2),qldata3(i,3));
+    qldata3(i,7)=OptimalAction(qldata3(i,2));   %optimal action
+        end
+    end
 
-recqvi(modl,1)=modl;
-recqvi(modl,4)=nanmean(bootql);
-recqvi(modl,5)=quantile(bootql,0.99);
-recqvi(modl,6)=nanmean(bootwis);  %we want this as high as possible
-recqvi(modl,7)=quantile(bootwis,0.05);  %we want this as high as possible
+    qldata3train=qldata3;
+
+    tic
+     [ bootql,bootwis ] = offpolicy_multiple_eval_010518( qldata3,physpol, 0.99,1,6,750);
+    toc
+
+    recqvi(modl,1)=modl;
+    recqvi(modl,4)=nanmean(bootql);
+    recqvi(modl,5)=quantile(bootql,0.99);
+    recqvi(modl,6)=nanmean(bootwis);  %we want this as high as possible
+    recqvi(modl,7)=quantile(bootwis,0.05);  %we want this as high as possible
 
 
-% testing on MIMIC-test
-disp('#### OFF-POLICY EVALUATION - MIMIC TEST SET ####')
-    
-% create new version of QLDATA3 with MIMIC TEST samples
-idxtest=knnsearch(C,Xtestmimic);
-idxs(test,modl)=idxtest;  %important: record state membership of test cohort
+    % testing on MIMIC-test
+    disp('#### OFF-POLICY EVALUATION - MIMIC TEST SET ####')
 
-actionbloctest=actionbloc(~train);
-Y90test=reformat5(~train,outcome);
-r=[100 -100];
-r2=r.*(2*(1-Y90test)-1); 
-qldata=[bloctestmimic idxtest actionbloctest Y90test zeros(numel(idxtest),1) r2(:,1) ptidtestmimic];  % contains bloc / state / action / outcome&reward     %1 = died
-qldata3=zeros(floor(size(qldata,1)*1.2),8); 
+    % create new version of QLDATA3 with MIMIC TEST samples
+    idxtest=knnsearch(C,Xtestmimic);
+    idxs(test,modl)=idxtest;  %important: record state membership of test cohort
 
-c=0;
-abss=[ncl+2 ncl+1]; %absorbing states numbers
+    actionbloctest=actionbloc(~train);
+    Y90test=reformat5(~train,outcome);
+    r=[100 -100];
+    r2=r.*(2*(1-Y90test)-1); 
+    qldata=[bloctestmimic idxtest actionbloctest Y90test zeros(numel(idxtest),1) r2(:,1) ptidtestmimic];  % contains bloc / state / action / outcome&reward     %1 = died
+    qldata3=zeros(floor(size(qldata,1)*1.2),8); 
+
+    c=0;
+    abss=[ncl+2 ncl+1]; %absorbing states numbers
  
         for i=1:size(qldata,1)-1
             c=c+1; qldata3(c,:)=qldata(i,[1:3 5 7 7 7 7]);
@@ -341,166 +350,173 @@ abss=[ncl+2 ncl+1]; %absorbing states numbers
         end
         qldata3(c+1:end,:)=[];
 
-% add pi(s,a) and b(s,a)
-p=0.01; %small correction factor // softening policies
-softpi=physpol; % behavior policy = clinicians'
-for i=1:750;  ii=softpi(i,:)==0;    z=p/sum(ii);    nz=p/sum(~ii);    softpi(i,ii)=z;   softpi(i,~ii)=softpi(i,~ii)-nz; end
-softb=abs(zeros(752,25)-p/24); %"optimal" policy = target policy = evaluation policy
-for i=1:750;softb(i,OptimalAction(i))=1-p;end
-
-for i=1:size(qldata3,1)  %adding the probas of policies to qldata
-    if qldata3(i,2)<=750
-qldata3(i,5)=softpi(qldata3(i,2),qldata3(i,3));
-qldata3(i,6)=softb(qldata3(i,2),qldata3(i,3));
-qldata3(i,7)=OptimalAction(qldata3(i,2));   %optimal action
+    % add pi(s,a) and b(s,a)
+    p=0.01; %small correction factor // softening policies
+    softpi=physpol; % behavior policy = clinicians'
+    for i=1:750 
+        ii=softpi(i,:)==0;    z=p/sum(ii);    nz=p/sum(~ii);    softpi(i,ii)=z;   softpi(i,~ii)=softpi(i,~ii)-nz;
     end
-end
-
-qldata3test=qldata3;
-
-tic
-[ bootmimictestql,bootmimictestwis ] = offpolicy_multiple_eval_010518( qldata3,physpol, 0.99,1,6,2000);
-toc
-
-recqvi(modl,19)=quantile(bootmimictestql,0.95);   %PHYSICIANS' 95% UB
-recqvi(modl,20)=nanmean(bootmimictestql);
-recqvi(modl,21)=quantile(bootmimictestql,0.99);
-recqvi(modl,22)=nanmean(bootmimictestwis);    
-recqvi(modl,23)=quantile(bootmimictestwis,0.01);  
-recqvi(modl,24)=quantile(bootmimictestwis,0.05);  %AI 95% LB, we want this as high as possible
-
-
-if recqvi(modl,24) > 40 %saves time if policy is not good on MIMIC test: skips to next model
-
-disp('########################## eICU TEST SET #############################')
-
-  idxtest2=cell(size(eICUzs,1),1);
-        ii=isnan(eICUzs);
-        disp('####   IDENTIFY STATE MEMBERSHIP OF eICU TEST RECORDS   ####')
-    tic
-      parfor i=1:size(eICUzs,1)
-        idxtest2(i)={knnsearch(C(:,~ii(i,:)),eICUzs(i,~ii(i,:)))};  %which ones are the k closest records in Xtrain? - only match on available data (ii columns)!
-      end
-    toc
     
-  idxtest2=cell2mat(idxtest2);
+    softb=abs(zeros(752,25)-p/24); %"optimal" policy = target policy = evaluation policy
+    
+    for i=1:750
+        softb(i,OptimalAction(i))=1-p;
+    end
 
-iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
-vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
- 
- a= reformat5(:,iol);                    %IV fluid
- a= tiedrank(a(a>0)) / length(a(a>0));   % excludes zero fluid (will be action 1)
- 
-        iof=floor((a+0.2499999999)*4);       %converts iv volume in 4 actions
-        a= reformat5(:,iol); a=find(a>0);    %location of non-zero fluid in big matrix
-        io=ones(size(reformat5,1),1);        %array of ones, by default     
-        io(a)=iof+1;                         %where more than zero fluid given: save actual action
-        vc=reformat5(:,vcl);  vcr= tiedrank(vc(vc~=0)) / numel(vc(vc~=0)); vcr=floor((vcr+0.249999999999)*4);  %converts to 4 bins
-        vcr(vcr==0)=1; vc(vc~=0)=vcr+1; vc(vc==0)=1;
-        ma1=[ median(reformat5(io==1,iol))  median(reformat5(io==2,iol))  median(reformat5(io==3,iol))  median(reformat5(io==4,iol))  median(reformat5(io==5,iol))];  %median dose of drug in all bins
-        ma2=[ median(reformat5(vc==1,vcl))  median(reformat5(vc==2,vcl))  median(reformat5(vc==3,vcl))  median(reformat5(vc==4,vcl))  median(reformat5(vc==5,vcl))] ;
-  
-med=[io vc];
-[uniqueValues,~,actionbloc] = unique(array2table(med),'rows');
-actionbloctrain=actionbloc(train);
-uniqueValuesdose=[ ma2(uniqueValues.med2)' ma1(uniqueValues.med1)'];  % median dose of each bin for all 25 actions
- 
-iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
-vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
-ma1=[ max(reformat5(io==1,iol))  max(reformat5(io==2,iol))  max(reformat5(io==3,iol))  max(reformat5(io==4,iol))  max(reformat5(io==5,iol))];  %upper dose of drug in all bins
-ma2=[ max(reformat5(vc==1,vcl))  max(reformat5(vc==2,vcl))  max(reformat5(vc==3,vcl))  max(reformat5(vc==4,vcl))  max(reformat5(vc==5,vcl))] ;
-
-% define actionbloctest = which actions are taken in the test set ????
-vct=eICUraw(:,4); vct(vct>ma2(nra-1))=nra; vct(vct==0)=1; for z=2:nra-1; vct(vct>ma2(z-1) & vct<=ma2(z))=z;end
-iot=eICUraw(:,45); for z=2:nra-1; iot(iot>ma1(z-1) & iot<=ma1(z))=z; end;iot(iot>ma1(nra-1))=nra;iot(iot==0)=1;
- 
-med=[iot vct];
-[~,~,actionbloctest] = unique(array2table(med),'rows');   %actions taken in my test samples
- 
-iol=eICUraw(:,45);      % DOSES IN TEST SET
-vcl=eICUraw(:,4);
-
-% CREATE QLDATA2 FOR EICU TEST SET
-
-ptid=eICUtable.patientunitstayid;
-blocstest=eICUtable.bloc;
-Y90test=eICUtable.hospmortality;
-r=[100 -100];
-r2=r.*(2*(1-Y90test)-1); 
-models=OptimalAction(idxtest2);                  %optimal action for each record
-modeldosevaso = uniqueValuesdose(models,1);      %dose reco in this model
-modeldosefluid = uniqueValuesdose(models,2);     %dose reco in this model
-
-
-
-qldata=[blocstest idxtest2 actionbloctest Y90test zeros(numel(idxtest2),1) r2(:,1) ptid  iol vcl modeldosefluid modeldosevaso  Y90test ];  % contains bloc / state / action / outcome&reward     %1 = died
-qldata2=zeros(floor(size(qldata,1)*1.2),13); 
-c=0;
-abss=[ncl+2 ncl+1]; %absorbing states numbers
- 
-        for i=1:size(qldata,1)-1
-            c=c+1;
-              qldata2(c,:)=qldata(i,[1:3 5 7 7 7 7 8:12]);
-            if qldata(i+1,1)==1 %end of trace for this patient
-                c=c+1;
-                qldata2(c,:)=[qldata(i,1)+1 abss(1+qldata(i,4)) 0 qldata(i,6) 0 0 0 qldata(i,7) qldata(i,8:12)]; 
-            end
+    
+    for i=1:size(qldata3,1)  %adding the probas of policies to qldata
+        if qldata3(i,2)<=750
+    qldata3(i,5)=softpi(qldata3(i,2),qldata3(i,3));
+    qldata3(i,6)=softb(qldata3(i,2),qldata3(i,3));
+    qldata3(i,7)=OptimalAction(qldata3(i,2));   %optimal action
         end
-qldata2(c+1:end,:)=[];
-
-
-% add pi(s,a) and b(s,a)
-p=0.01; % softening policies
-
-softpi=physpol;%physpoleicu;   
-for i=1:750
-    ii=softpi(i,:)==0; z=p/sum(ii); nz=p/sum(~ii); softpi(i,ii)=z; softpi(i,~ii)=softpi(i,~ii)-nz;
-end
-
-softb=abs(zeros(752,25)-p/24); %optimal policy
-for i=1:750
-softb(i,OptimalAction(i))=1-p;
-end
-
-for i=1:size(qldata2,1)  %adding the probas of policies to qldata
-    if qldata2(i,2)<=750
-qldata2(i,5)=softpi(qldata2(i,2),qldata2(i,3));
-qldata2(i,6)=softb(qldata2(i,2),qldata2(i,3));
-qldata2(i,7)=OptimalAction(qldata2(i,2)); 
     end
-end
 
-tic  %multiple evaluation
- [ booteicuql,booteicuwis ] = offpolicy_multiple_eval_010518( qldata2,physpol, 0.99,1,20,500);
-toc
+    qldata3test=qldata3;
 
-recqvi(modl,10)=nanmean(booteicuql);
-recqvi(modl,11)=quantile(booteicuql,0.99);
-recqvi(modl,12)=nanmean(booteicuwis); 
-recqvi(modl,13)=quantile(booteicuwis,0.01);  
-recqvi(modl,14)=quantile(booteicuwis,0.05); 
+    tic
+    [ bootmimictestql,bootmimictestwis ] = offpolicy_multiple_eval_010518( qldata3,physpol, 0.99,1,6,2000);
+    toc
+
+    recqvi(modl,19)=quantile(bootmimictestql,0.95);   %PHYSICIANS' 95% UB
+    recqvi(modl,20)=nanmean(bootmimictestql);
+    recqvi(modl,21)=quantile(bootmimictestql,0.99);
+    recqvi(modl,22)=nanmean(bootmimictestwis);    
+    recqvi(modl,23)=quantile(bootmimictestwis,0.01);  
+    recqvi(modl,24)=quantile(bootmimictestwis,0.05);  %AI 95% LB, we want this as high as possible
 
 
-end
+    if recqvi(modl,24) > 40 %saves time if policy is not good on MIMIC test: skips to next model
+
+        % disp('########################## eICU TEST SET #############################')
+        % 
+        %   idxtest2=cell(size(eICUzs,1),1);
+        %         ii=isnan(eICUzs);
+        %         disp('####   IDENTIFY STATE MEMBERSHIP OF eICU TEST RECORDS   ####')
+        %     tic
+        %       parfor i=1:size(eICUzs,1)
+        %         idxtest2(i)={knnsearch(C(:,~ii(i,:)),eICUzs(i,~ii(i,:)))};  %which ones are the k closest records in Xtrain? - only match on available data (ii columns)!
+        %       end
+        %     toc
+        %     
+        %   idxtest2=cell2mat(idxtest2);
+        % 
+        % iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
+        % vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
+        %  
+        %  a= reformat5(:,iol);                    %IV fluid
+        %  a= tiedrank(a(a>0)) / length(a(a>0));   % excludes zero fluid (will be action 1)
+        %  
+        %         iof=floor((a+0.2499999999)*4);       %converts iv volume in 4 actions
+        %         a= reformat5(:,iol); a=find(a>0);    %location of non-zero fluid in big matrix
+        %         io=ones(size(reformat5,1),1);        %array of ones, by default     
+        %         io(a)=iof+1;                         %where more than zero fluid given: save actual action
+        %         vc=reformat5(:,vcl);  vcr= tiedrank(vc(vc~=0)) / numel(vc(vc~=0)); vcr=floor((vcr+0.249999999999)*4);  %converts to 4 bins
+        %         vcr(vcr==0)=1; vc(vc~=0)=vcr+1; vc(vc==0)=1;
+        %         ma1=[ median(reformat5(io==1,iol))  median(reformat5(io==2,iol))  median(reformat5(io==3,iol))  median(reformat5(io==4,iol))  median(reformat5(io==5,iol))];  %median dose of drug in all bins
+        %         ma2=[ median(reformat5(vc==1,vcl))  median(reformat5(vc==2,vcl))  median(reformat5(vc==3,vcl))  median(reformat5(vc==4,vcl))  median(reformat5(vc==5,vcl))] ;
+        %   
+        % med=[io vc];
+        % [uniqueValues,~,actionbloc] = unique(array2table(med),'rows');
+        % actionbloctrain=actionbloc(train);
+        % uniqueValuesdose=[ ma2(uniqueValues.med2)' ma1(uniqueValues.med1)'];  % median dose of each bin for all 25 actions
+        %  
+        % iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
+        % vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
+        % ma1=[ max(reformat5(io==1,iol))  max(reformat5(io==2,iol))  max(reformat5(io==3,iol))  max(reformat5(io==4,iol))  max(reformat5(io==5,iol))];  %upper dose of drug in all bins
+        % ma2=[ max(reformat5(vc==1,vcl))  max(reformat5(vc==2,vcl))  max(reformat5(vc==3,vcl))  max(reformat5(vc==4,vcl))  max(reformat5(vc==5,vcl))] ;
+        % 
+        % % define actionbloctest = which actions are taken in the test set ????
+        % vct=eICUraw(:,4); vct(vct>ma2(nra-1))=nra; vct(vct==0)=1; for z=2:nra-1; vct(vct>ma2(z-1) & vct<=ma2(z))=z;end
+        % iot=eICUraw(:,45); for z=2:nra-1; iot(iot>ma1(z-1) & iot<=ma1(z))=z; end;iot(iot>ma1(nra-1))=nra;iot(iot==0)=1;
+        %  
+        % med=[iot vct];
+        % [~,~,actionbloctest] = unique(array2table(med),'rows');   %actions taken in my test samples
+        %  
+        % iol=eICUraw(:,45);      % DOSES IN TEST SET
+        % vcl=eICUraw(:,4);
+        % 
+        % % CREATE QLDATA2 FOR EICU TEST SET
+        % 
+        % ptid=eICUtable.patientunitstayid;
+        % blocstest=eICUtable.bloc;
+        % Y90test=eICUtable.hospmortality;
+        % r=[100 -100];
+        % r2=r.*(2*(1-Y90test)-1); 
+        % models=OptimalAction(idxtest2);                  %optimal action for each record
+        % modeldosevaso = uniqueValuesdose(models,1);      %dose reco in this model
+        % modeldosefluid = uniqueValuesdose(models,2);     %dose reco in this model
+        % 
+        % 
+        % 
+        % qldata=[blocstest idxtest2 actionbloctest Y90test zeros(numel(idxtest2),1) r2(:,1) ptid  iol vcl modeldosefluid modeldosevaso  Y90test ];  % contains bloc / state / action / outcome&reward     %1 = died
+        % qldata2=zeros(floor(size(qldata,1)*1.2),13); 
+        % c=0;
+        % abss=[ncl+2 ncl+1]; %absorbing states numbers
+        %  
+        %         for i=1:size(qldata,1)-1
+        %             c=c+1;
+        %               qldata2(c,:)=qldata(i,[1:3 5 7 7 7 7 8:12]);
+        %             if qldata(i+1,1)==1 %end of trace for this patient
+        %                 c=c+1;
+        %                 qldata2(c,:)=[qldata(i,1)+1 abss(1+qldata(i,4)) 0 qldata(i,6) 0 0 0 qldata(i,7) qldata(i,8:12)]; 
+        %             end
+        %         end
+        % qldata2(c+1:end,:)=[];
 
 
-if recqvi(modl,24)>0 & recqvi(modl,14)>0   % if 95% LB is >0 : save the model (otherwise it's pointless)
-    
-    disp('####   GOOD MODEL FOUND - SAVING IT   ####' ) 
-    allpols(polkeep,1)={modl};
-    allpols(polkeep,3)={Qon};
-    allpols(polkeep,4)={physpol};
-    allpols(polkeep,6)={transitionr};
-    allpols(polkeep,7)={transitionr2};
-    allpols(polkeep,8)={R};
-    allpols(polkeep,9)={C};
-    allpols(polkeep,10)={train};
-    allpols(polkeep,11)={qldata3train};
-    allpols(polkeep,12)={qldata3test};
-    allpols(polkeep,13)={qldata2};
-    polkeep=polkeep+1;
-    
-end
+        % add pi(s,a) and b(s,a)
+        p=0.01; % softening policies
+
+        softpi=physpol;%physpoleicu;   
+        for i=1:750
+            ii=softpi(i,:)==0; z=p/sum(ii); nz=p/sum(~ii); softpi(i,ii)=z; softpi(i,~ii)=softpi(i,~ii)-nz;
+        end
+
+        softb=abs(zeros(752,25)-p/24); %optimal policy
+        for i=1:750
+            softb(i,OptimalAction(i))=1-p;
+        end
+
+        % for i=1:size(qldata2,1)  %adding the probas of policies to qldata
+            %     if qldata2(i,2)<=750
+            % qldata2(i,5)=softpi(qldata2(i,2),qldata2(i,3));
+            % qldata2(i,6)=softb(qldata2(i,2),qldata2(i,3));
+            % qldata2(i,7)=OptimalAction(qldata2(i,2)); 
+            %     end
+        % end
+
+        tic  %multiple evaluation
+         [ booteicuql,booteicuwis ] = offpolicy_multiple_eval_010518( qldata2,physpol, 0.99,1,20,500);
+        toc
+
+        recqvi(modl,10)=nanmean(booteicuql);
+        recqvi(modl,11)=quantile(booteicuql,0.99);
+        recqvi(modl,12)=nanmean(booteicuwis); 
+        recqvi(modl,13)=quantile(booteicuwis,0.01);  
+        recqvi(modl,14)=quantile(booteicuwis,0.05); 
+
+
+    end
+
+
+    if recqvi(modl,24)>0 & recqvi(modl,14)>0   % if 95% LB is >0 : save the model (otherwise it's pointless)
+
+        disp('####   GOOD MODEL FOUND - SAVING IT   ####' ) 
+        allpols(polkeep,1)={modl};
+        allpols(polkeep,3)={Qon};
+        allpols(polkeep,4)={physpol};
+        allpols(polkeep,6)={transitionr};
+        allpols(polkeep,7)={transitionr2};
+        allpols(polkeep,8)={R};
+        allpols(polkeep,9)={C};
+        allpols(polkeep,10)={train};
+        allpols(polkeep,11)={qldata3train};
+        allpols(polkeep,12)={qldata3test};
+    %     allpols(polkeep,13)={qldata2};
+        polkeep=polkeep+1;
+
+    end
 
  
 end
@@ -508,7 +524,7 @@ end
 recqvi(modl:end,:)=[];
 
 tic
-     save('D:\BACKUP MIT PC\Data_160219.mat', '-v7.3');
+     save('C:\Users\amrut\Projects\AI_Clinician\Data_160219.mat', '-v7.3');
 toc
 
 
@@ -706,19 +722,19 @@ ylabel('Probability')
 set(gca,'FontSize',12)
 
 
-%% evaluation of chosen model on eICU
-
-disp('####   TESTING CHOSEN MODEL ON eICU    ####')
-
-
-tic 
- [ booteicuql,booteicuwis] = offpolicy_multiple_eval_010518( qldata2,physpol, 0.99,1,500,8000);
-toc
-  
-booteicuql=repmat(booteicuql,floor(size(booteicuwis,1)/size(booteicuql,1)),1);  % copy-paste the array, variance is low anyway
-
-[quantile(booteicuql(:,1),0.25)  quantile(booteicuql(:,1),0.5)   quantile(booteicuql(:,1),0.75)]
-[quantile(booteicuwis(:,1),0.25)  quantile(booteicuwis(:,1),0.5)   quantile(booteicuwis(:,1),0.75)]
+% %% evaluation of chosen model on eICU
+% 
+% disp('####   TESTING CHOSEN MODEL ON eICU    ####')
+% 
+% 
+% tic 
+%  [ booteicuql,booteicuwis] = offpolicy_multiple_eval_010518( qldata2,physpol, 0.99,1,500,8000);
+% toc
+%   
+% booteicuql=repmat(booteicuql,floor(size(booteicuwis,1)/size(booteicuql,1)),1);  % copy-paste the array, variance is low anyway
+% 
+% [quantile(booteicuql(:,1),0.25)  quantile(booteicuql(:,1),0.5)   quantile(booteicuql(:,1),0.75)]
+% [quantile(booteicuwis(:,1),0.25)  quantile(booteicuwis(:,1),0.5)   quantile(booteicuwis(:,1),0.75)]
 
 
 %% FIG 3A - Heatmap of Q values
@@ -747,189 +763,189 @@ set(gca,'FontSize',12)
 hold off
 
 
-%%  FIGS 3B3C : 5x5 3D histogram for distrib of action from eICU   
-
-nra=5;
-iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
-vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
- 
- a= reformat5(:,iol);                   %IV fluid
- a= tiedrank(a(a>0)) / length(a(a>0));   % excludes zero fluid (will be action 1)
- 
-        iof=floor((a+0.2499999999)*4);  %converts iv volume in 4 actions
-        a= reformat5(:,iol); a=find(a>0);  %location of non-zero fluid in big matrix
-        io=ones(size(reformat5,1),1);  %array of ones, by default     
-        io(a)=iof+1;   %where more than zero fluid given: save actual action
-        vc=reformat5(:,vcl);  vcr= tiedrank(vc(vc~=0)) / numel(vc(vc~=0)); vcr=floor((vcr+0.249999999999)*4);  %converts to 4 bins
-        vcr(vcr==0)=1; vc(vc~=0)=vcr+1; vc(vc==0)=1;
-        ma1=[ median(reformat5(io==1,iol))  median(reformat5(io==2,iol))  median(reformat5(io==3,iol))  median(reformat5(io==4,iol))  median(reformat5(io==5,iol))];  %median dose of drug in all bins
-        ma2=[ median(reformat5(vc==1,vcl))  median(reformat5(vc==2,vcl))  median(reformat5(vc==3,vcl))  median(reformat5(vc==4,vcl))  median(reformat5(vc==5,vcl))] ;
-  
-med=[io vc];
-[uniqueValues,~,actionbloc] = unique(array2table(med),'rows');
-actionbloctrain=actionbloc(train);
-uniqueValuesdose=[ ma2(uniqueValues.med2)' ma1(uniqueValues.med1)'];  % median dose of each bin for all 25 actions
- 
-iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
-vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
- ma1=[ max(reformat5(io==1,iol))  max(reformat5(io==2,iol))  max(reformat5(io==3,iol))  max(reformat5(io==4,iol))  max(reformat5(io==5,iol))];  %upper dose of drug in all bins
- ma2=[ max(reformat5(vc==1,vcl))  max(reformat5(vc==2,vcl))  max(reformat5(vc==3,vcl))  max(reformat5(vc==4,vcl))  max(reformat5(vc==5,vcl))] ;
- 
-
-% define actionbloctest = which actions are taken in the test set ????
-vct=eICUraw(:,4); vct(vct>ma2(nra-1))=nra; vct(vct==0)=1; for z=2:nra-1; vct(vct>ma2(z-1) & vct<=ma2(z))=z;end
-iot=eICUraw(:,45); for z=2:nra-1; iot(iot>ma1(z-1) & iot<=ma1(z))=z; end;iot(iot>ma1(nra-1))=nra;iot(iot==0)=1;
- 
-med=[iot vct];
-
- 
-figure
-subplot(1,2,1)   % /////////////   ACTUAL ACTIONS   ////////////////
- 
-[counts] = hist3(med,'Edges',{1:5 1:5})./size(med,1);
- counts = flipud(counts);
-b=bar3(counts);
-for k = 1:length(b)
-    zdata = b(k).ZData;
-    b(k).CData = zdata;
-    b(k).FaceColor = 'interp';
-end
-
-ax = gca;
-ax.YTick=1:5;
-ax.XTick=1:5;
-ax.YTickLabel = {'>530', '180-530','50-180','1-50','0'};
-ax.XTickLabel = {'0', '0.001-0.08','0.08-0.22','0.22-0.45','>0.45'};
-view(45,35)
-xlabel('Vasopressor dose')
-ylabel('     IV fluids dose')
-set(get(gca,'YLabel'),'Position',[6, 6, 0]);
-set(get(gca,'XLabel'),'Position',[6, 6, 0]);
-
-title('Clinicians'' policy')
-c=colorbar;
-c.Label.String = '%';
-axis square
-axis([0.5 5.5 0.5 5.5 0 0.3])
-set(gca,'FontSize',12)
-  
-
-disp('##########   Clinician   ##########')
-disp('  on vaso     ¦ on low fluid')
-disp([sum(sum(counts(:,2:5))) sum(sum(counts(4:5,:)))])
-disp('  on vaso and low fluids    ¦ on no vaso and high fluid')
-disp([sum(sum(counts(3:5,2:5)))  sum(sum(counts(1:2,1)))])
-disp('  on low vaso ')
-disp([sum(sum(counts(:,2:4)))  ])
-
-
-subplot(1,2,2)  % /////////////   OPTIMAL ACTIONS   ////////////////
-OA1=OptimalAction(idxtest2);%test);              %optimal action for each record
-a=[OA1 floor((OA1-0.0001)./5)+1 OA1-floor(OA1./5)*5];
-a(a(:,3)==0,3)=5;
-med=a(:,[2 3]);
-[counts] = hist3(med,'Edges',{1:5 1:5})./size(med,1);
-  counts = flipud(counts);
- 
- b=bar3(counts);
-for k = 1:length(b)
-    zdata = b(k).ZData;
-    b(k).CData = zdata;
-    b(k).FaceColor = 'interp';
-end
-
-disp('##########   AI Clinician   ##########')
-disp('  on vaso     ¦ on low fluid')
-disp([sum(sum(counts(:,2:5))) sum(sum(counts(4:5,:)))])
-disp('  on vaso and low fluids    ¦ on no vaso and high fluid')
-disp([sum(sum(counts(3:5,2:5)))  sum(sum(counts(1:2,1)))])
-disp('  on low vaso ')
-disp([sum(sum(counts(:,2:4)))  ])
-
-
-colorbar
-ax = gca;
-ax.YTick=1:5;
-ax.XTick=1:5;
-ax.YTickLabel = {'>530', '180-530','50-180','1-50','0'};
-ax.XTickLabel = {'0', '0.001-0.08','0.08-0.22','0.22-0.45','>0.45'};
-view(45,35)
-xlabel('Vasopressor dose')
-ylabel('     IV fluids dose')
-set(get(gca,'YLabel'),'Position',[6, 6, 0]);
-set(get(gca,'XLabel'),'Position',[6, 6, 0]);
-title('AI policy')
-c=colorbar;
-c.Label.String = '%';
-axis square
-axis([0.5 5.5 0.5 5.5 0 0.3])
-set(gca,'FontSize',12)
-
-
-%% FIGS 3D & 3E : "Ucurves" eICU TEST SET with bootstrapped CI
-
-t=[-1250:100:1250]; t2=[-1.05:0.1:1.05];
-
-nr_reps=200; 
-p=unique(qldata2(:,8));
-prop=10000/numel(p); %10k patients of the samples are used
-prop=min([prop 0.75]);  %max possible value is 0.75 (75% of the samples are used)
-
-% ACTUAL DATA
-disp('U-curves with actual doses...')
-% column key:  9 given fluid    10 given vaso    11 model dose fluid     12 model dose vaso
-qldata=qldata2(qldata2(:,3)~=0,:);
-qldata(:,14)=qldata(:,10)-qldata(:,12);
-qldata(:,15)=qldata(:,9)-qldata(:,11);
-
-r=array2table(qldata(:,[8 13 14 15]));  
-r.Properties.VariableNames = {'id','morta','vaso','ivf'};
-d=grpstats(r,'id',{'mean','median','sum'});
-d3=([d.mean_morta d.mean_vaso d.mean_ivf d.median_vaso d.median_ivf d.sum_ivf d.GroupCount]);
-r1=zeros(numel(t)-1,nr_reps,2);
-r2=zeros(numel(t2)-1,nr_reps,2);
-
-for rep=1:nr_reps
-    
-disp(rep);
-ii=floor(rand(size(p,1),1)+prop);     % select a random sample of trajectories
-d4=d3(ii==1,:);
-
-a=[];     % IVF
-b=[];     % vasopressors
-
-
-for i=1:numel(t)-1
-    ii=d4(:,5)>=t(i) & d4(:,5)<=t(i+1);  %median
-    a=[a ; [t(i) t(i+1) sum(ii) nanmean(d4(ii,1)) nanstd(d4(ii,1))]];
-end
-r1(:,rep,1)=a(:,4);
-r1(:,rep,2)=a(:,3);
-r1(:,rep,3)=a(:,5)./sqrt(a(:,3));  % SEM !!
-
-for i=1:numel(t2)-1
-    ii=d4(:,4)>=t2(i) & d4(:,4)<=t2(i+1);   %median
-    b=[b ; [t2(i) t2(i+1) sum(ii) nanmean(d4(ii,1)) nanstd(d4(ii,1))]];
-end
-r2(:,rep,1)=b(:,4);
-r2(:,rep,2)=b(:,3);
-r2(:,rep,3)=b(:,5)./sqrt(b(:,3));  % SEM !!
-
-end
-
-a1=nanmean(r1(:,:,1),2);
-a2=nanmean(r2(:,:,1),2);
-
-
-% computing SEM in each bin
-s1=nan(numel(t)-1,1);
-for i=1:numel(t)-1
-s1(i)=nanstd([ones(nansum(r1(i,:,1).*r1(i,:,2) ),1); zeros(nansum((1-r1(i,:,1)).*r1(i,:,2)),1)])/sqrt(nansum(r1(i,:,2)));
-end
-s2=nan(numel(t2)-1,1);
-for i=1:numel(t2)-1
-s2(i)=nanstd([ones(nansum(r2(i,:,1).*r2(i,:,2) ),1); zeros(nansum((1-r2(i,:,1)).*r2(i,:,2)),1)])/sqrt(nansum(r2(i,:,2)));
-end
+% %%  FIGS 3B3C : 5x5 3D histogram for distrib of action from eICU   
+% 
+% nra=5;
+% iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
+% vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
+%  
+%  a= reformat5(:,iol);                   %IV fluid
+%  a= tiedrank(a(a>0)) / length(a(a>0));   % excludes zero fluid (will be action 1)
+%  
+%         iof=floor((a+0.2499999999)*4);  %converts iv volume in 4 actions
+%         a= reformat5(:,iol); a=find(a>0);  %location of non-zero fluid in big matrix
+%         io=ones(size(reformat5,1),1);  %array of ones, by default     
+%         io(a)=iof+1;   %where more than zero fluid given: save actual action
+%         vc=reformat5(:,vcl);  vcr= tiedrank(vc(vc~=0)) / numel(vc(vc~=0)); vcr=floor((vcr+0.249999999999)*4);  %converts to 4 bins
+%         vcr(vcr==0)=1; vc(vc~=0)=vcr+1; vc(vc==0)=1;
+%         ma1=[ median(reformat5(io==1,iol))  median(reformat5(io==2,iol))  median(reformat5(io==3,iol))  median(reformat5(io==4,iol))  median(reformat5(io==5,iol))];  %median dose of drug in all bins
+%         ma2=[ median(reformat5(vc==1,vcl))  median(reformat5(vc==2,vcl))  median(reformat5(vc==3,vcl))  median(reformat5(vc==4,vcl))  median(reformat5(vc==5,vcl))] ;
+%   
+% med=[io vc];
+% [uniqueValues,~,actionbloc] = unique(array2table(med),'rows');
+% actionbloctrain=actionbloc(train);
+% uniqueValuesdose=[ ma2(uniqueValues.med2)' ma1(uniqueValues.med1)'];  % median dose of each bin for all 25 actions
+%  
+% iol=find(ismember(MIMICtable.Properties.VariableNames,{'input_4hourly'}));
+% vcl=find(ismember(MIMICtable.Properties.VariableNames,{'max_dose_vaso'}));
+%  ma1=[ max(reformat5(io==1,iol))  max(reformat5(io==2,iol))  max(reformat5(io==3,iol))  max(reformat5(io==4,iol))  max(reformat5(io==5,iol))];  %upper dose of drug in all bins
+%  ma2=[ max(reformat5(vc==1,vcl))  max(reformat5(vc==2,vcl))  max(reformat5(vc==3,vcl))  max(reformat5(vc==4,vcl))  max(reformat5(vc==5,vcl))] ;
+%  
+% 
+% % define actionbloctest = which actions are taken in the test set ????
+% vct=eICUraw(:,4); vct(vct>ma2(nra-1))=nra; vct(vct==0)=1; for z=2:nra-1; vct(vct>ma2(z-1) & vct<=ma2(z))=z;end
+% iot=eICUraw(:,45); for z=2:nra-1; iot(iot>ma1(z-1) & iot<=ma1(z))=z; end;iot(iot>ma1(nra-1))=nra;iot(iot==0)=1;
+%  
+% med=[iot vct];
+% 
+%  
+% figure
+% subplot(1,2,1)   % /////////////   ACTUAL ACTIONS   ////////////////
+%  
+% [counts] = hist3(med,'Edges',{1:5 1:5})./size(med,1);
+%  counts = flipud(counts);
+% b=bar3(counts);
+% for k = 1:length(b)
+%     zdata = b(k).ZData;
+%     b(k).CData = zdata;
+%     b(k).FaceColor = 'interp';
+% end
+% 
+% ax = gca;
+% ax.YTick=1:5;
+% ax.XTick=1:5;
+% ax.YTickLabel = {'>530', '180-530','50-180','1-50','0'};
+% ax.XTickLabel = {'0', '0.001-0.08','0.08-0.22','0.22-0.45','>0.45'};
+% view(45,35)
+% xlabel('Vasopressor dose')
+% ylabel('     IV fluids dose')
+% set(get(gca,'YLabel'),'Position',[6, 6, 0]);
+% set(get(gca,'XLabel'),'Position',[6, 6, 0]);
+% 
+% title('Clinicians'' policy')
+% c=colorbar;
+% c.Label.String = '%';
+% axis square
+% axis([0.5 5.5 0.5 5.5 0 0.3])
+% set(gca,'FontSize',12)
+%   
+% 
+% disp('##########   Clinician   ##########')
+% disp('  on vaso     ¦ on low fluid')
+% disp([sum(sum(counts(:,2:5))) sum(sum(counts(4:5,:)))])
+% disp('  on vaso and low fluids    ¦ on no vaso and high fluid')
+% disp([sum(sum(counts(3:5,2:5)))  sum(sum(counts(1:2,1)))])
+% disp('  on low vaso ')
+% disp([sum(sum(counts(:,2:4)))  ])
+% 
+% 
+% subplot(1,2,2)  % /////////////   OPTIMAL ACTIONS   ////////////////
+% OA1=OptimalAction(idxtest2);%test);              %optimal action for each record
+% a=[OA1 floor((OA1-0.0001)./5)+1 OA1-floor(OA1./5)*5];
+% a(a(:,3)==0,3)=5;
+% med=a(:,[2 3]);
+% [counts] = hist3(med,'Edges',{1:5 1:5})./size(med,1);
+%   counts = flipud(counts);
+%  
+%  b=bar3(counts);
+% for k = 1:length(b)
+%     zdata = b(k).ZData;
+%     b(k).CData = zdata;
+%     b(k).FaceColor = 'interp';
+% end
+% 
+% disp('##########   AI Clinician   ##########')
+% disp('  on vaso     ¦ on low fluid')
+% disp([sum(sum(counts(:,2:5))) sum(sum(counts(4:5,:)))])
+% disp('  on vaso and low fluids    ¦ on no vaso and high fluid')
+% disp([sum(sum(counts(3:5,2:5)))  sum(sum(counts(1:2,1)))])
+% disp('  on low vaso ')
+% disp([sum(sum(counts(:,2:4)))  ])
+% 
+% 
+% colorbar
+% ax = gca;
+% ax.YTick=1:5;
+% ax.XTick=1:5;
+% ax.YTickLabel = {'>530', '180-530','50-180','1-50','0'};
+% ax.XTickLabel = {'0', '0.001-0.08','0.08-0.22','0.22-0.45','>0.45'};
+% view(45,35)
+% xlabel('Vasopressor dose')
+% ylabel('     IV fluids dose')
+% set(get(gca,'YLabel'),'Position',[6, 6, 0]);
+% set(get(gca,'XLabel'),'Position',[6, 6, 0]);
+% title('AI policy')
+% c=colorbar;
+% c.Label.String = '%';
+% axis square
+% axis([0.5 5.5 0.5 5.5 0 0.3])
+% set(gca,'FontSize',12)
+% 
+% 
+% %% FIGS 3D & 3E : "Ucurves" eICU TEST SET with bootstrapped CI
+% 
+% t=[-1250:100:1250]; t2=[-1.05:0.1:1.05];
+% 
+% nr_reps=200; 
+% p=unique(qldata2(:,8));
+% prop=10000/numel(p); %10k patients of the samples are used
+% prop=min([prop 0.75]);  %max possible value is 0.75 (75% of the samples are used)
+% 
+% % ACTUAL DATA
+% disp('U-curves with actual doses...')
+% % column key:  9 given fluid    10 given vaso    11 model dose fluid     12 model dose vaso
+% qldata=qldata2(qldata2(:,3)~=0,:);
+% qldata(:,14)=qldata(:,10)-qldata(:,12);
+% qldata(:,15)=qldata(:,9)-qldata(:,11);
+% 
+% r=array2table(qldata(:,[8 13 14 15]));  
+% r.Properties.VariableNames = {'id','morta','vaso','ivf'};
+% d=grpstats(r,'id',{'mean','median','sum'});
+% d3=([d.mean_morta d.mean_vaso d.mean_ivf d.median_vaso d.median_ivf d.sum_ivf d.GroupCount]);
+% r1=zeros(numel(t)-1,nr_reps,2);
+% r2=zeros(numel(t2)-1,nr_reps,2);
+% 
+% for rep=1:nr_reps
+%     
+% disp(rep);
+% ii=floor(rand(size(p,1),1)+prop);     % select a random sample of trajectories
+% d4=d3(ii==1,:);
+% 
+% a=[];     % IVF
+% b=[];     % vasopressors
+% 
+% 
+% for i=1:numel(t)-1
+%     ii=d4(:,5)>=t(i) & d4(:,5)<=t(i+1);  %median
+%     a=[a ; [t(i) t(i+1) sum(ii) nanmean(d4(ii,1)) nanstd(d4(ii,1))]];
+% end
+% r1(:,rep,1)=a(:,4);
+% r1(:,rep,2)=a(:,3);
+% r1(:,rep,3)=a(:,5)./sqrt(a(:,3));  % SEM !!
+% 
+% for i=1:numel(t2)-1
+%     ii=d4(:,4)>=t2(i) & d4(:,4)<=t2(i+1);   %median
+%     b=[b ; [t2(i) t2(i+1) sum(ii) nanmean(d4(ii,1)) nanstd(d4(ii,1))]];
+% end
+% r2(:,rep,1)=b(:,4);
+% r2(:,rep,2)=b(:,3);
+% r2(:,rep,3)=b(:,5)./sqrt(b(:,3));  % SEM !!
+% 
+% end
+% 
+% a1=nanmean(r1(:,:,1),2);
+% a2=nanmean(r2(:,:,1),2);
+% 
+% 
+% % computing SEM in each bin
+% s1=nan(numel(t)-1,1);
+% for i=1:numel(t)-1
+% s1(i)=nanstd([ones(nansum(r1(i,:,1).*r1(i,:,2) ),1); zeros(nansum((1-r1(i,:,1)).*r1(i,:,2)),1)])/sqrt(nansum(r1(i,:,2)));
+% end
+% s2=nan(numel(t2)-1,1);
+% for i=1:numel(t2)-1
+% s2(i)=nanstd([ones(nansum(r2(i,:,1).*r2(i,:,2) ),1); zeros(nansum((1-r2(i,:,1)).*r2(i,:,2)),1)])/sqrt(nansum(r2(i,:,2)));
+% end
 
 
 
@@ -1195,3 +1211,51 @@ for i=1:5
 [min(reformat5(io==i,iol)) median(reformat5(io==i,iol)) max(reformat5(io==i,iol))]
 end
 
+%% #####################################################################
+% AIClinician_core_160219
+% ####  INITIALISATION  ####
+% Starting parallel pool (parpool) using the 'local' profile ...
+% Connected to the parallel pool (number of workers: 4).
+% ########################   MODEL NUMBER : 1 
+% 04-Feb-2020 11:35:59
+% ####  CLUSTERING  ####
+% Replicate 2, 55 iterations, total sum of distances = 1.19956e+06.
+% Replicate 4, 56 iterations, total sum of distances = 1.20193e+06.
+% Replicate 1, 97 iterations, total sum of distances = 1.20076e+06.
+% Replicate 3, 138 iterations, total sum of distances = 1.19931e+06.
+% Replicate 20, 79 iterations, total sum of distances = 1.20029e+06.
+% Replicate 12, 84 iterations, total sum of distances = 1.19959e+06.
+% Replicate 8, 83 iterations, total sum of distances = 1.19923e+06.
+% Replicate 16, 60 iterations, total sum of distances = 1.20078e+06.
+% Replicate 19, 72 iterations, total sum of distances = 1.19999e+06.
+% Replicate 11, 71 iterations, total sum of distances = 1.19846e+06.
+% Replicate 7, 66 iterations, total sum of distances = 1.19962e+06.
+% Replicate 15, 61 iterations, total sum of distances = 1.19932e+06.
+% Replicate 18, 76 iterations, total sum of distances = 1.20028e+06.
+% Replicate 6, 64 iterations, total sum of distances = 1.20065e+06.
+% Replicate 10, 92 iterations, total sum of distances = 1.20035e+06.
+% Replicate 14, 83 iterations, total sum of distances = 1.19863e+06.
+% Replicate 17, 67 iterations, total sum of distances = 1.19899e+06.
+% Replicate 5, 72 iterations, total sum of distances = 1.19867e+06.
+% Replicate 13, 55 iterations, total sum of distances = 1.20059e+06.
+% Replicate 9, 53 iterations, total sum of distances = 1.20102e+06.
+% Replicate 24, 61 iterations, total sum of distances = 1.20045e+06.
+% Replicate 28, 54 iterations, total sum of distances = 1.20077e+06.
+% Replicate 26, 74 iterations, total sum of distances = 1.20086e+06.
+% Replicate 22, 101 iterations, total sum of distances = 1.19741e+06.
+% Replicate 23, 70 iterations, total sum of distances = 1.19781e+06.
+% Replicate 25, 68 iterations, total sum of distances = 1.19894e+06.
+% Replicate 27, 95 iterations, total sum of distances = 1.20014e+06.
+% Replicate 21, 118 iterations, total sum of distances = 1.20014e+06.
+% Replicate 29, 74 iterations, total sum of distances = 1.20182e+06.
+% Replicate 30, 66 iterations, total sum of distances = 1.20063e+06.
+% Replicate 31, 72 iterations, total sum of distances = 1.19967e+06.
+% Replicate 32, 76 iterations, total sum of distances = 1.19927e+06.
+% Best total sum of distances = 1.19741e+06
+% ####  CREATE ACTIONS  ####
+% ####  CREATE QLDATA3  ####
+% ####  CREATE TRANSITION MATRIX T(S',S,A) ####
+% ####  CREATE TRANSITION MATRIX T(S,S',A)  ####
+% ####  CREATE REWARD MATRIX  R(S,A) ####
+% ####   POLICY ITERATION   ####
+% #####################################################################
